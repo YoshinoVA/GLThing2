@@ -1,0 +1,20 @@
+1. Getting objects to draw on-screen (check)
+2. Texturing (diffuse map) (check)
+3. Lighting (check)
+4. Advanced Texturing (check)
+5. Shadows
+  a. Render Targets (check)
+  b. Post-Process (check)
+  c. Shadows (framebuffer failed)
+6. Deferred Rendering w/ all of the above
+7. Camera Movement
+
+-------------------------------------------------
+
+1. Get an object drawing (e.g. Soulspear) (check)
+2. Get a floor drawing beneath it (e.g. Soulspear with a quad)
+3. Try to get the shadow to cast onto the floor (!!!)
+  a. Make sure that the shadow map exists (check this in NSight)
+  b. Send the shadow map into the fragment shader for lighting purposes
+  c. Enjoy the shadows!
+4. Make the light dynamic by rotating its direction
