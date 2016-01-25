@@ -7,11 +7,12 @@ layout(location=2) in vec4 Normal;
 out vec2 vTexCoord; 
 out vec4 vNormal; 
 
+uniform mat4 Model;
 uniform mat4 ProjectionView; 
 
 void main()
 { 
 	vTexCoord = TexCoord; 
 	vNormal = Normal; 
-	gl_Position= ProjectionView * Position;
+	gl_Position= ProjectionView * Model * Position;
 }

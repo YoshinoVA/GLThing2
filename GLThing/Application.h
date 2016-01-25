@@ -48,6 +48,7 @@ class DemoApp : public Application
 	//  - a buffer that meshes can be drawn to
 
 	unsigned int texture;
+	unsigned int whiteTex;
 	unsigned int normalmap;
 	unsigned int fboTexture, fboDepth;
 

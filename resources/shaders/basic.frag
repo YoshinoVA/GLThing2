@@ -11,8 +11,8 @@ uniform sampler2D diffuse;
 void main()
 { 
 	//float d = max(0, dot(normalize(vNormal.xyz), LightDir)); 
-	//FragColor = texture(diffuse, vTexCoord);
+	FragColor = texture(diffuse, vTexCoord);
 	
 	// debugging, remove later
-	FragColor = vec4(1,1,1,1);
+	//FragColor = vec4(1,1,1,1);
 }

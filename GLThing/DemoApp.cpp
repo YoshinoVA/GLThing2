@@ -273,6 +273,8 @@ bool DemoApp::init()
 
 	// START RENDERING CODE ------------------
 
+	glEnable(GL_DEPTH_TEST);
+
 	modelShader  = loadShader("../resources/shaders/basic.vert","../resources/shaders/basic.frag");
 	screenShader = loadShader("../resources/shaders/screen.vert", "../resources/shaders/screen.frag");
 	shadowShader = loadShader("../resources/shaders/shadow.vert", "../resources/shaders/shadow.frag");
@@ -308,6 +310,19 @@ bool DemoApp::init()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
 	stbi_image_free(data);
+
+	//Load plain white
+	data = stbi_load("./white.png", &imageWidth, &imageHeight, &imageFormat, STBI_default);
+
+	glGenTextures(1, &whiteTex);
+	glActiveTexture(GL_TEXTURE3);
+	glBindTexture(GL_TEXTURE_2D, whiteTex);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, imageWidth, imageHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+	stbi_image_free(data);
+
 
 	// generate FBO
 	glGenFramebuffers(1, &FBO);
@@ -393,11 +408,17 @@ bool DemoApp::update()
 // - drawing meshes to the backbuffer
 void DemoApp::draw()
 {
+	// prep
 	mat4 view = glm::lookAt(vec3(10, 10, 10), vec3(0), vec3(0, 1, 0));
 	mat4 projection = glm::perspective(glm::pi<float>() * 0.25f, 16 / 9.f, 0.1f, 1000.f);
 
+	mat4 spearModel = glm::mat4(1) * glm::translate(vec3(3, 3, 3));
+	mat4 quadModel = glm::mat4(1) * glm::translate(vec3(-3, -1, -2));
+
 	glClearColor(0.25f, 0.25f, 0.25f, 1);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	// draw meshes
 
 	Gizmos::draw(projection * view);
 
@@ -417,6 +438,9 @@ void DemoApp::draw()
 	loc = glGetUniformLocation(modelShader, "normal");
 	glUniform1i(loc, 1);
 
+	loc = glGetUniformLocation(modelShader, "Model");
+	glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(spearModel));
+
 	if (fbx != nullptr)
 	{
 		for (unsigned int i = 0; i < fbx->getMeshCount(); ++i)
@@ -434,8 +458,18 @@ void DemoApp::draw()
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 	glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, nullptr);
 
+	glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(quadModel));
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, whiteTex);
+
+	loc = glGetUniformLocation(modelShader, "diffuse");
+	glUniform1i(loc, 0);
+
 	glBindVertexArray(quad.VAO);
-	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+	glDrawElements(GL_TRIANGLES, quad.indexCount, GL_UNSIGNED_INT, nullptr);
+
+	// post
 
 	glfwSwapBuffers(window);
 	glfwPollEvents();
