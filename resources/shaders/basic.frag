@@ -1,18 +1,23 @@
 #version 410
 
-in vec2 vTexCoord; 
-in vec4 vNormal; 
+in vec4 vNormal;
+in vec4 vShadowCoord;
 
 out vec4 FragColor;
 
-uniform sampler2D diffuse; 
-//uniform vec3 LightDir; 
+uniform vec3 LightDir;
+
+uniform sampler2D shadowMap;
+uniform float shadowBias;
 
 void main()
 { 
-	//float d = max(0, dot(normalize(vNormal.xyz), LightDir)); 
-	FragColor = texture(diffuse, vTexCoord);
+	float d = max(0, dot(normalize(vNormal.xyz), LightDir)); 
 	
-	// debugging, remove later
-	//FragColor = vec4(1,1,1,1);
+	if (texture(shadowMap, vShadowCoord.xy).r < vShadowCoord.z - shadowBias)
+	{
+		d = 0.5;
+	}
+	
+	FragColor = vec4(d,d,d,1);
 }

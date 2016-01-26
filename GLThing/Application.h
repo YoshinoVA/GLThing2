@@ -30,9 +30,9 @@ class DemoApp : public Application
 	virtual void exit();
 	FlyCamera camera;
 
-	unsigned int modelShader;
-	unsigned int screenShader;
-	unsigned int shadowShader;
+	unsigned int modelShader;		// renders the fbx model and quad to the world
+	unsigned int screenShader;		// applies a postprocessing quad to the screen
+	unsigned int shadowShader;		// generates a shadow map texture to be applied by the model shader
 
 	unsigned int indexCount;
 	unsigned int VBO, IBO, VAO, FBO;
@@ -50,6 +50,7 @@ class DemoApp : public Application
 	unsigned int texture;
 	unsigned int whiteTex;
 	unsigned int normalmap;
+
 	unsigned int fboTexture, fboDepth;
 
 	float currentTime = 0;

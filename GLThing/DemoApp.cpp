@@ -104,13 +104,13 @@ void DemoApp::createOpenGLBuffers(FBXFile* fbx)
 		glVertexAttribPointer(0, 4, GL_FLOAT, GL_TRUE,
 			sizeof(FBXVertex), 0);
 
-		glEnableVertexAttribArray(1); // texcoord
-		glVertexAttribPointer(1, 2, GL_FLOAT, GL_TRUE,
-			sizeof(FBXVertex), ((char*)0) + FBXVertex::TexCoord1Offset);
-
-		glEnableVertexAttribArray(2); // normal
-		glVertexAttribPointer(2, 4, GL_FLOAT, GL_TRUE,
+		glEnableVertexAttribArray(1); // normal
+		glVertexAttribPointer(1, 4, GL_FLOAT, GL_TRUE,
 			sizeof(FBXVertex), ((char*)0) + FBXVertex::NormalOffset);
+
+		glEnableVertexAttribArray(2); // texcoord
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_TRUE,
+			sizeof(FBXVertex), ((char*)0) + FBXVertex::TexCoord1Offset);
 
 		glEnableVertexAttribArray(3); // tangent
 		glVertexAttribPointer(3, 4, GL_FLOAT, GL_TRUE,
@@ -331,7 +331,7 @@ bool DemoApp::init()
 	// generate and bind a texture for the FBO
 	glGenTextures(1, &fboTexture);
 	glBindTexture(GL_TEXTURE_2D, fboTexture);
-	glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, 512, 512);
+	glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, 1024, 1024);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, fboTexture, 0);
@@ -339,24 +339,23 @@ bool DemoApp::init()
 	// generate and bind a depth texture for the FBO
 	glGenRenderbuffers(1, &fboDepth);
 	glBindRenderbuffer(GL_RENDERBUFFER, fboDepth);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 512, 512);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 1024, 1024);
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, fboDepth);
 
 	//16-bit depth component for FBO texture
-	glGenTextures(1, &fboDepth);
-	glBindTexture(GL_TEXTURE_2D, fboDepth);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH, GL_DEPTH_COMPONENT16, 800, 600, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	//glGenTextures(1, &fboDepth);
+	//glBindTexture(GL_TEXTURE_2D, fboDepth);
+	//glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH, GL_DEPTH_COMPONENT16, 1024, 1024, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	//glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, fboDepth, 0);
 
 	// assign attachments to the FBO
 	//  - attachments tell the FBO what textures to render the buffer onto
 	GLenum drawBuffers[] = { GL_COLOR_ATTACHMENT0 };
 	glDrawBuffers(1, drawBuffers);
-	//glDrawBuffer(GL_NONE);
 
 	// validate/verify that the FBO is in working order
 	GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
@@ -409,37 +408,48 @@ bool DemoApp::update()
 void DemoApp::draw()
 {
 	// prep
+	// Camera
 	mat4 view = glm::lookAt(vec3(10, 10, 10), vec3(0), vec3(0, 1, 0));
 	mat4 projection = glm::perspective(glm::pi<float>() * 0.25f, 16 / 9.f, 0.1f, 1000.f);
 
+	// Meshes
 	mat4 spearModel = glm::mat4(1) * glm::translate(vec3(3, 3, 3));
 	mat4 quadModel = glm::mat4(1) * glm::translate(vec3(-3, -1, -2));
+
+	// Lighting
+	glm::vec3 lightDirection = glm::normalize(glm::vec3(1, 2.5f, 1));
+	glm::mat4 lightProj = glm::ortho<float>(-10, 10, -10, 10, -10, 10);
+	glm::mat4 lightView = glm::lookAt(lightDirection, glm::vec3(0), glm::vec3(0, 1, 0));
+
+	glm::mat4 textureSpaceOffset(
+		0.5f, 0.0f, 0.0f, 0.0f,
+		0.0f, 0.5f, 0.0f, 0.0f,
+		0.0f, 0.0f, 0.5f, 0.0f,
+		0.5f, 0.5f, 0.5f, 1.0f
+		);
+
+	glm::mat4 lightMatrix = lightProj * lightView;
+
+	// rendering starts
 
 	glClearColor(0.25f, 0.25f, 0.25f, 1);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// draw meshes
 
-	Gizmos::draw(projection * view);
+	// Shadow Pass
+	//	- bind the shadow framebuffer
+	//	- bind the shadow shader program
+	//	- render the world
 
-	glUseProgram(modelShader);
-	int loc = glGetUniformLocation(modelShader, "ProjectionView");
-	glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(projection * view));
+	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+	glViewport(0, 0, 1024, 1024);
+	glClear(GL_DEPTH_BUFFER_BIT);
 
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, texture);
+	glUseProgram(shadowShader);
 
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, normalmap);
-
-	loc = glGetUniformLocation(modelShader, "diffuse");
-	glUniform1i(loc, 0);
-
-	loc = glGetUniformLocation(modelShader, "normal");
-	glUniform1i(loc, 1);
-
-	loc = glGetUniformLocation(modelShader, "Model");
-	glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(spearModel));
+	int loc = glGetUniformLocation(shadowShader, "lightMatrix");
+	glUniformMatrix4fv(loc, 1, GL_FALSE, &(lightMatrix[0][0]));
 
 	if (fbx != nullptr)
 	{
@@ -454,10 +464,87 @@ void DemoApp::draw()
 		}
 	}
 
-	glBindVertexArray(VAO);
-	glDrawArrays(GL_TRIANGLES, 0, 6);
-	glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, nullptr);
+	// quad in shadow pass
 
+	loc = glGetUniformLocation(shadowShader, "Model");
+	glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(quadModel));
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, whiteTex);
+
+	loc = glGetUniformLocation(shadowShader, "diffuse");
+	glUniform1i(loc, 0);
+
+	glBindVertexArray(quad.VAO);
+	glDrawElements(GL_TRIANGLES, quad.indexCount, GL_UNSIGNED_INT, nullptr);
+
+	// Forward Rendering Pass
+	//	- bind the screen's framebuffer
+	//	- bind the model shader
+	//	- render the world again
+
+	
+
+	// rendering the soulspear
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glViewport(0, 0, 800, 600);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	Gizmos::draw(projection * view);
+
+	glUseProgram(modelShader);
+
+	loc = glGetUniformLocation(modelShader, "ProjectionView");
+	glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(projection * view));
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, texture);
+
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, normalmap);
+
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, fboTexture);
+
+	loc = glGetUniformLocation(modelShader, "diffuse");
+	glUniform1i(loc, 0);
+
+	loc = glGetUniformLocation(modelShader, "normal");
+	glUniform1i(loc, 1);
+
+	loc = glGetUniformLocation(modelShader, "shadowMap");
+	glUniform1i(loc, 2);
+
+	loc = glGetUniformLocation(modelShader, "Model");
+	glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(spearModel));
+
+	lightMatrix = textureSpaceOffset * lightMatrix;
+
+	loc = glGetUniformLocation(modelShader, "lightMatrix");
+	glUniformMatrix4fv(loc, 1, GL_FALSE, &(lightMatrix[0][0]));
+
+	loc = glGetUniformLocation(modelShader, "LightDir");
+	glUniform3fv(loc, 1, &lightDirection[0]);
+
+	loc = glGetUniformLocation(modelShader, "shadowBias");
+	glUniform1f(loc, 1);
+
+	if (fbx != nullptr)
+	{
+		for (unsigned int i = 0; i < fbx->getMeshCount(); ++i)
+		{
+			FBXMeshNode* mesh = fbx->getMeshByIndex(i);
+
+			unsigned int* glData = (unsigned int*)mesh->m_userData;
+
+			glBindVertexArray(glData[0]);
+			glDrawElements(GL_TRIANGLES, (unsigned int)mesh->m_indices.size(), GL_UNSIGNED_INT, 0);
+		}
+	}
+
+	// rendering the quad
+
+	loc = glGetUniformLocation(modelShader, "Model");
 	glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(quadModel));
 
 	glActiveTexture(GL_TEXTURE0);
