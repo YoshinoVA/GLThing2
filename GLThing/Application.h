@@ -33,6 +33,8 @@ class DemoApp : public Application
 	unsigned int modelShader;		// renders the fbx model and quad to the world
 	unsigned int screenShader;		// applies a postprocessing quad to the screen
 	unsigned int shadowShader;		// generates a shadow map texture to be applied by the model shader
+	unsigned int gpassShader;
+	unsigned int phongShader;
 
 	unsigned int indexCount;
 	unsigned int VBO, IBO, VAO, FBO;
@@ -51,7 +53,7 @@ class DemoApp : public Application
 	unsigned int whiteTex;
 	unsigned int normalmap;
 
-	unsigned int fboTexture, fboDepth;
+	unsigned int fboTexture, fboDepth, gpassFBO;
 
 	float currentTime = 0;
 	float lastTime = 0;

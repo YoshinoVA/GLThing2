@@ -1,11 +1,11 @@
-1. Getting objects to draw on-screen (check)
+1. Getting objects to draw on-screen -> load/draw multiple FBX files
 2. Texturing (diffuse map) (check)
-3. Lighting (check)
-4. Advanced Texturing (check)
-5. Shadows
+3. Lighting 	      -> Phong Shading (Specular(DOESN'T WORK YET))
+4. Advanced Texturing -> Normal Mapping
+5. Shadows		      -> Get shadows lined up
   a. Render Targets (check)
   b. Post-Process (check)
-  c. Shadows (framebuffer failed)
+  c. Shadows
 6. Deferred Rendering w/ all of the above
 7. Camera Movement
 
@@ -18,3 +18,11 @@
   b. Send the shadow map into the fragment shader for lighting purposes
   c. Enjoy the shadows!
 4. Make the light dynamic by rotating its direction
+
+-------------------------------------------------
+
+Replaced loc code with simpler equations so I only have to do it once
+
+Can load multiple images
+
+Can load multiple shaders

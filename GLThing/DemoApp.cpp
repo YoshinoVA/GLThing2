@@ -143,6 +143,58 @@ void DemoApp::cleanupOpenGLBuffers(FBXFile* fbx)
 	}
 }
 
+unsigned char* loadImage(const char* imagePath, GLuint texture)
+{
+	int imageWidth = 0;
+	int imageHeight = 0;
+	int imageFormat = 0;
+
+	unsigned char* data = stbi_load(imagePath, &imageWidth, &imageHeight, &imageFormat, STBI_default);
+
+	glGenTextures(1, &texture);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, texture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, imageWidth, imageHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+	stbi_image_free(data);
+
+	return data;
+}
+
+int locationFloat(unsigned int shader, const char* string, int number)
+{
+	int loc = glGetUniformLocation(shader, string);
+	glUniform1f(loc, number);
+
+	return loc;
+}
+
+int locationVec3(unsigned int shader, const char* string, int number, glm::vec3 value)
+{
+	int loc = glGetUniformLocation(shader, string);
+	glUniform3fv(loc, number, glm::value_ptr(value));
+
+	return loc;
+}
+
+int locationMatrix(unsigned int shader, const char* string, int number, const GLfloat value)
+{
+	int loc = glGetUniformLocation(shader, string);
+	glUniformMatrix4fv(loc, number, GL_FALSE, &(value));
+
+	return loc;
+}
+
+int locationModel(unsigned int shader, const char* string, int number, glm::mat4 value)
+{
+	int loc = glGetUniformLocation(shader, string);
+	glUniformMatrix4fv(loc, number, GL_FALSE, glm::value_ptr(value));
+
+	return loc;
+}
+
 //void DemoApp::generateGrid(unsigned int rows, unsigned int cols)
 //{
 //	Vertex* aoVerts = new Vertex[rows * cols];
@@ -278,6 +330,8 @@ bool DemoApp::init()
 	modelShader  = loadShader("../resources/shaders/basic.vert","../resources/shaders/basic.frag");
 	screenShader = loadShader("../resources/shaders/screen.vert", "../resources/shaders/screen.frag");
 	shadowShader = loadShader("../resources/shaders/shadow.vert", "../resources/shaders/shadow.frag");
+	gpassShader  = loadShader("../resources/shaders/G-Buff.vert", "../resources/shaders/G-Buff.frag");
+	phongShader  = loadShader("../resources/shaders/Phong.vert", "../resources/shaders/Phong.frag");
 
 	// loading textures -------------------------
 	using glm::vec3;
@@ -289,40 +343,13 @@ bool DemoApp::init()
 	int imageFormat = 0;
 
 	//Load Diffuse mapping
-	unsigned char* data = stbi_load("../resources/FBX/soulspear/soulspear_diffuse.tga", &imageWidth, &imageHeight, &imageFormat, STBI_default);
-
-	glGenTextures(1, &texture);
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, texture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, imageWidth, imageHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-
-	stbi_image_free(data);
+	loadImage("../resources/FBX/soulspear/soulspear_diffuse.tga", texture);
 
 	//Load Normal Mapping
-	data = stbi_load("../resources/FBX/soulspear/soulspear_normal.tga", &imageWidth, &imageHeight, &imageFormat, STBI_default);
-
-	glGenTextures(1, &normalmap);
-	glActiveTexture(GL_TEXTURE2);
-	glBindTexture(GL_TEXTURE_2D, normalmap);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-
-	stbi_image_free(data);
+	loadImage("../resources/FBX/soulspear/soulspear_normal.tga", normalmap);
 
 	//Load plain white
-	data = stbi_load("./white.png", &imageWidth, &imageHeight, &imageFormat, STBI_default);
-
-	glGenTextures(1, &whiteTex);
-	glActiveTexture(GL_TEXTURE3);
-	glBindTexture(GL_TEXTURE_2D, whiteTex);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, imageWidth, imageHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-
-	stbi_image_free(data);
-
+	loadImage("./white.png", whiteTex);
 
 	// generate FBO
 	glGenFramebuffers(1, &FBO);
@@ -342,15 +369,7 @@ bool DemoApp::init()
 	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 1024, 1024);
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, fboDepth);
 
-	//16-bit depth component for FBO texture
-	//glGenTextures(1, &fboDepth);
-	//glBindTexture(GL_TEXTURE_2D, fboDepth);
-	//glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH, GL_DEPTH_COMPONENT16, 1024, 1024, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
-	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	//glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, fboDepth, 0);
+	//setup gpass Framebuffer
 
 	// assign attachments to the FBO
 	//  - attachments tell the FBO what textures to render the buffer onto
@@ -382,8 +401,7 @@ bool DemoApp::init()
 // - performing calculations every frame
 // - user input
 bool DemoApp::update()
-{
-	
+{	
 	//glEnable(GL_DEPTH_TEST);
 
 	Gizmos::clear();
@@ -414,12 +432,12 @@ void DemoApp::draw()
 
 	// Meshes
 	mat4 spearModel = glm::mat4(1) * glm::translate(vec3(3, 3, 3));
-	mat4 quadModel = glm::mat4(1) * glm::translate(vec3(-3, -1, -2));
+	mat4 quadModel  = glm::mat4(1) * glm::translate(vec3(-3, -1, -2));
 
 	// Lighting
-	glm::vec3 lightDirection = glm::normalize(glm::vec3(1, 2.5f, 1));
-	glm::mat4 lightProj = glm::ortho<float>(-10, 10, -10, 10, -10, 10);
-	glm::mat4 lightView = glm::lookAt(lightDirection, glm::vec3(0), glm::vec3(0, 1, 0));
+	glm::vec3 lightDirection = glm::normalize(glm::vec3(1, 2.5f, -1));
+	glm::mat4 lightProj      = glm::ortho<float>(-10, 10, -10, 10, -10, 10);
+	glm::mat4 lightView		 = glm::lookAt(lightDirection, glm::vec3(0), glm::vec3(0, 1, 0));
 
 	glm::mat4 textureSpaceOffset(
 		0.5f, 0.0f, 0.0f, 0.0f,
@@ -432,7 +450,7 @@ void DemoApp::draw()
 
 	// rendering starts
 
-	glClearColor(0.25f, 0.25f, 0.25f, 1);
+	glClearColor(0, 0, 0, 1);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// draw meshes
@@ -447,9 +465,7 @@ void DemoApp::draw()
 	glClear(GL_DEPTH_BUFFER_BIT);
 
 	glUseProgram(shadowShader);
-
-	int loc = glGetUniformLocation(shadowShader, "lightMatrix");
-	glUniformMatrix4fv(loc, 1, GL_FALSE, &(lightMatrix[0][0]));
+	locationMatrix(shadowShader, "LightMatrix", 1, lightMatrix[0][0]);
 
 	if (fbx != nullptr)
 	{
@@ -466,14 +482,12 @@ void DemoApp::draw()
 
 	// quad in shadow pass
 
-	loc = glGetUniformLocation(shadowShader, "Model");
-	glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(quadModel));
+	locationModel(shadowShader, "Model", 1, quadModel);
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, whiteTex);
 
-	loc = glGetUniformLocation(shadowShader, "diffuse");
-	glUniform1i(loc, 0);
+	locationFloat(shadowShader, "diffuse", 0);
 
 	glBindVertexArray(quad.VAO);
 	glDrawElements(GL_TRIANGLES, quad.indexCount, GL_UNSIGNED_INT, nullptr);
@@ -483,7 +497,6 @@ void DemoApp::draw()
 	//	- bind the model shader
 	//	- render the world again
 
-	
 
 	// rendering the soulspear
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -494,8 +507,7 @@ void DemoApp::draw()
 
 	glUseProgram(modelShader);
 
-	loc = glGetUniformLocation(modelShader, "ProjectionView");
-	glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(projection * view));
+	locationModel(modelShader, "ProjectionView", 1, projection * view);
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, texture);
@@ -506,28 +518,18 @@ void DemoApp::draw()
 	glActiveTexture(GL_TEXTURE2);
 	glBindTexture(GL_TEXTURE_2D, fboTexture);
 
-	loc = glGetUniformLocation(modelShader, "diffuse");
-	glUniform1i(loc, 0);
+	locationFloat(modelShader, "diffuse", 0);
+	locationFloat(modelShader, "normal", 1);
+	//locationFloat(modelShader, "diffuse", 2);
 
-	loc = glGetUniformLocation(modelShader, "normal");
-	glUniform1i(loc, 1);
-
-	loc = glGetUniformLocation(modelShader, "shadowMap");
-	glUniform1i(loc, 2);
-
-	loc = glGetUniformLocation(modelShader, "Model");
-	glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(spearModel));
+	locationModel(modelShader, "Model", 1, spearModel);
 
 	lightMatrix = textureSpaceOffset * lightMatrix;
 
-	loc = glGetUniformLocation(modelShader, "lightMatrix");
-	glUniformMatrix4fv(loc, 1, GL_FALSE, &(lightMatrix[0][0]));
+	locationMatrix(modelShader, "lightMatrix", 1, lightMatrix[0][0]);
+	locationMatrix(modelShader, "LightDir", 1, lightDirection[0]);
 
-	loc = glGetUniformLocation(modelShader, "LightDir");
-	glUniform3fv(loc, 1, &lightDirection[0]);
-
-	loc = glGetUniformLocation(modelShader, "shadowBias");
-	glUniform1f(loc, 1);
+	locationFloat(modelShader, "shadowBias", 0.01);
 
 	if (fbx != nullptr)
 	{
@@ -544,20 +546,27 @@ void DemoApp::draw()
 
 	// rendering the quad
 
-	loc = glGetUniformLocation(modelShader, "Model");
-	glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(quadModel));
+	locationModel(modelShader, "Model", 1, quadModel);
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, whiteTex);
 
-	loc = glGetUniformLocation(modelShader, "diffuse");
-	glUniform1i(loc, 0);
+	locationFloat(modelShader, "diffuse", 0);
 
 	glBindVertexArray(quad.VAO);
 	glDrawElements(GL_TRIANGLES, quad.indexCount, GL_UNSIGNED_INT, nullptr);
 
-	// post
+	//phongShader
+	glUseProgram(phongShader);
 
+	glm::vec3 LightColor = { 1.0f, 1.0f, 1.0f };
+	locationVec3(phongShader, "LightColor", 1, LightColor);
+
+	glm::vec3 cameraPos = { 0.3f, 0.3f, 0.3f };
+	locationVec3(phongShader, "cameraPos", 1, cameraPos);
+	locationFloat(phongShader, "SpecPow", 128.0f);
+
+	// post
 	glfwSwapBuffers(window);
 	glfwPollEvents();
 }
@@ -599,7 +608,7 @@ void DemoApp::oldDraw()
 
 	glm::vec3 lightColor = { 1.0f, 1.0f, 1.0f };
 
-	loc = glGetUniformLocation(modelShader, "LightColor");
+	loc = glGetUniformLocation(phongShader, "LightColor");
 	glUniform3fv(loc, 1, glm::value_ptr(lightColor));
 
 	glm::vec3 lightDir = { 0.0f, 1.0f, 0.0f };
@@ -609,8 +618,7 @@ void DemoApp::oldDraw()
 
 	glm::vec3 cameraPos = { 0.3f, 0.3f, 0.3f };
 
-	loc = glGetUniformLocation(modelShader, "CameraPos");
-	glUniform3fv(loc, 1, glm::value_ptr(cameraPos));
+	locationVec3(modelShader, "cameraPos", 1, cameraPos);
 
 	glm::float1 specPow = (128.0f);
 
